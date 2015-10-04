@@ -1,0 +1,45 @@
+.reviewer{
+    position:relative;
+    padding-right: 3px;
+}
+
+.reviewer .avatar{
+    opacity: 0.5;
+    border-radius: 4px;
+}
+
+
+.badge-approved{
+    background: url('../images/icon-approved.svg');
+    position: absolute;
+    right: -6px;
+    top: -20px;
+    text-align: center;
+    display: block;
+    height: 12px;
+    width: 12px;
+    background-size: 100%;
+}
+
+
+.tooltip::before {    
+    font-size: 10px;
+    content: attr(data-tip) ;   
+    position:absolute;
+    z-index: 999999;
+    white-space:nowrap;
+    left: 0;
+    top: 17px;
+    background:#000;
+    color:#e0e0e0;
+    padding:0px 7px;
+    line-height: 24px;
+    height: 24px;
+     
+    opacity: 0;  
+    transition:opacity 0.4s ease-out; 
+    }
+     
+.tooltip:hover::before {
+    opacity: 1;
+}

@@ -255,9 +255,7 @@ class Approval_Workflow {
         global $wpdb;
         $is_new = false; 
         
-        // always reset approval when there is an update
-        $this->resetApproval($post_id);
-            
+        
         if($this->done){
             return $post_id;
         }
@@ -272,7 +270,12 @@ class Approval_Workflow {
 		$this->done = true;
 		
 		// Only do this for people that don't have publish permissions
-		if(!current_user_can('publish_' . $post->post_type . 's')){    // WordPress always appends an 's' to the end of the capability    
+		if(!current_user_can('publish_' . $post->post_type . 's')){    // WordPress always appends an 's' to the end of the capability  
+            if ( $post->post_status == 'pending' )  {
+                $this->resetApproval($post_id);
+            }
+            
+            
             // Get custom fields
             $custom = get_post_custom($post_id);
 		    
@@ -303,6 +306,7 @@ class Approval_Workflow {
             if ( $post->post_status == 'publish'){
                 $this->clear_post_workflow_settings($post_id);
             } else if (  $post->post_status == 'pending' ) {
+                $this->resetApproval($post_id);
                 update_post_meta($post_id, '_in_progress', 1);
                 update_post_meta($post_id, '_waiting_for_approval', 1);
             }

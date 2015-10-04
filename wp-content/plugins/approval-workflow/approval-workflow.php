@@ -299,8 +299,13 @@ class Approval_Workflow {
     		}
 		} else {
 		    // Admin jumped in...clear any workflow settings
-            $this->clear_post_workflow_settings($post_id);
-            
+           // $this->clear_post_workflow_settings($post_id);
+            if ( $post->post_status == 'publish'){
+                $this->clear_post_workflow_settings($post_id);
+            } else if (  $post->post_status == 'pending' ) {
+                update_post_meta($post_id, '_in_progress', 1);
+                update_post_meta($post_id, '_waiting_for_approval', 1);
+            }
 		}
 		
 		return $post_id;

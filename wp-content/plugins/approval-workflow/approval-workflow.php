@@ -354,10 +354,40 @@ class Approval_Workflow {
                 $_reviewer->approval_status = false;
             }
             
-            array_push( $output, $_reviewer );
+            array_push( $reviewers_that_already_approved, $_reviewer );
         }
-                       
-        return $output;
+                   
+        // wordpress doesn't allow multiple roles apply to a user
+        // so we may want to display the users that have permission to approve
+        // the user shows up as reviewer only when he/she have approved the post review (the user role more likely a administrator)
+        $extra_reviewers = array();
+        foreach( $reviewerIds_that_already_approved as $reviewerId ){
+            $isListedAsReviewer = false;
+            foreach( $reviewers_that_already_approved as $reviewer ){
+                if ( $reviewer->ID == $reviewerId ){
+                    $isListedAsReviewer = true;
+                    break;   
+                }
+            }
+            
+            if ( !$isListedAsReviewer ){
+                $userdata = get_userdata($reviewerId);
+                if ( $userdata ){
+                    $_reviewer = new WorkflowReviewer();
+                    $_reviewer->ID = $userdata->ID;
+                    $_reviewer->display_name = $userdata->display_name;
+                    $_reviewer->post_id = $postId;
+                    $_reviewer->approval_status = true;
+                    array_push( $extra_reviewers, $_reviewer );
+                }                
+            }
+        }
+        
+        if ( count($extra_reviewers) > 0){
+             $reviewers_that_already_approved = array_merge( $reviewers_that_already_approved, $extra_reviewers );
+        }
+        
+        return $reviewers_that_already_approved;
     }
     
     function view_workflow(){

@@ -46,6 +46,11 @@ class Approval_Workflow {
             $this->options->save();
         }
         
+        if(!isset($this->options->force_workflow)){
+            $this->options->force_workflow = 'true';
+            $this->options->save();
+        }
+        
         //register stylesheet
         wp_register_style('approval-workflow-style', AW_PLUGIN_URL . '/css/style.css' );
         wp_enqueue_style( 'approval-workflow-style' );
@@ -187,7 +192,14 @@ class Approval_Workflow {
 		    if(isset($_POST['approval_role'])){
 		        $this->options->approval_role = $_POST['approval_role'];
 		    }
+            
+            if(isset($_POST['force_workflow'])){
+		        $this->options->force_workflow = $_POST['force_workflow'];
+		    }else{
+                $this->options->force_workflow = 'off';
+            }
 		    
+            
 		    $this->options->save();
     ?>
     		<script>
@@ -201,17 +213,27 @@ class Approval_Workflow {
     		<form method="post" action="<?php echo $current_page ?>?page=approval-workflow-options&action=update">
     		<?php wp_nonce_field('update-options'); ?>
     		<table class="form-table">
-    		<tr valign="top">
-    			<th scope="row">
-    				<strong><?php _e('Approval Role'); ?></strong><br />
-    				<em><?php _e('Which role will be approving the edits?')?></em>
-    			</th>
-    			<td>
-    				<select name="approval_role" id="approval_role">
-    				<?php wp_dropdown_roles($this->options->approval_role); ?>
-    				</select>
-    			</td>
-    		</tr>
+                <tr valign="top">
+                    <th scope="row">
+                        <strong><?php _e('Approval Role'); ?></strong><br />
+                        <em><?php _e('Which role will be approving the edits?')?></em>
+                    </th>
+                    <td>
+                        <select name="approval_role" id="approval_role">
+                        <?php wp_dropdown_roles($this->options->approval_role); ?>
+                        </select>
+                    </td>
+                </tr>
+                <tr valign="top">
+                    <th scope="row">
+                        
+                        <em><?php _e('Set to true if all post has to go to approval workflow')?></em>
+                    </th>
+                    <td>
+                        <input name="force_workflow" id="force_workflow" type="checkbox" <?php echo $this->options->force_workflow =='on' ? 'checked' : '' ; ?> />
+                        <strong><?php _e('Force Workflow'); ?></strong><br />
+                    </td>
+                </tr>
     		</table>
     		<input type="hidden" name="action" value="update" />
     		<input type="hidden" name="page_options" value="approval_role" />
@@ -233,14 +255,24 @@ class Approval_Workflow {
         $currentScreen = get_current_screen();
         
 		// Only show if people don't have publish permissions
-		if(!current_user_can('publish_' . $post->post_type . 's')){    // WordPress always appends an 's' to the end of the capability  )){
+		//if(!current_user_can('publish_' . $post->post_type . 's')){    // WordPress always appends an 's' to the end of the capability  )){
+        
+        if ($this->options->force_workflow != 'on'){
 ?>
 		<div class="misc-pub-section misc-pub-section-last">
 			<input type="checkbox" name="aw_submit_to_workflow" id="aw_submit_to_workflow" value="1" /><label for="aw_submit_to_workflow"><strong><?php _e('Submit to Workflow'); ?></strong></label> 
 		</div>
 <?php
-		}
-        else if( $currentScreen->action != 'add' ) {
+		}else{
+           ?>
+		<div class="misc-pub-section misc-pub-section-last" style="display:none">
+			<input type="checkbox" name="aw_submit_to_workflow" id="aw_submit_to_workflow" value="1" checked disabled /><label for="aw_submit_to_workflow" style="color: #999;"><strong><?php _e('Submit to Workflow'); ?></strong></label> 
+		</div>
+<?php 
+        }
+        
+        
+        if( $currentScreen->action != 'add' ) {
          // show reviewers on edit mode only
            
 ?>
@@ -255,6 +287,7 @@ class Approval_Workflow {
         global $wpdb;
         $is_new = false; 
         
+        //remove_action( 'save_post', array(&$this, 'save_post'), 1, 2 );
         
         if($this->done){
             return $post_id;
@@ -267,10 +300,13 @@ class Approval_Workflow {
 			return $post_id;
 		}
 		
-		$this->done = true;
 		
-		// Only do this for people that don't have publish permissions
+            
+		// if using workflow
+        //if((isset($_POST['aw_submit_to_workflow']) && $_POST['aw_submit_to_workflow'] == 1)){
 		if(!current_user_can('publish_' . $post->post_type . 's')){    // WordPress always appends an 's' to the end of the capability  
+            
+            
             if ( $post->post_status == 'pending' )  {
                 $this->resetApproval($post_id);
             }
@@ -288,23 +324,33 @@ class Approval_Workflow {
     			$is_new = true;
     		}    		
     		
+           // wp_update_post( array( 'ID' => $post_id, 'post_status' => 'pending' ) );
+            
+            
     		if(!$is_new){
         		// Set published content to previous version
         		$last_revision = $last_revision->ID;
         		wp_restore_post_revision($last_revision);
     		}
+            
+            
     		update_post_meta($post_id, '_in_progress', 1);
     		
     		// If submitting to workflow
             if((isset($_POST['aw_submit_to_workflow']) && $_POST['aw_submit_to_workflow'] == 1)){
                 update_post_meta($post_id, '_waiting_for_approval', 1);
-    		    $this->notify_approvers($post);
+                $this->notify_approvers($post);
     		}
+            
 		} else {
-		    // Admin jumped in...clear any workflow settings
-           // $this->clear_post_workflow_settings($post_id);
-            if ( $post->post_status == 'publish'){
-                $this->clear_post_workflow_settings($post_id);
+            if ( $post->post_status == 'publish' ){
+                if ( ($this->options->force_workflow == 'on') && !$this->isAllApproved($post_id) ){
+                    // reset to pending if nobody yet approved
+                    wp_update_post( array( 'ID' => $post_id, 'post_status' => 'pending' ) );
+                }else{
+                    $this->done = true;
+                    $this->clear_post_workflow_settings($post_id);
+                }               
             } else if (  $post->post_status == 'pending' ) {
                 $this->resetApproval($post_id);
                 update_post_meta($post_id, '_in_progress', 1);
@@ -338,6 +384,13 @@ class Approval_Workflow {
     
     function resetApproval($postId){
         return delete_post_meta($postId, '_approved_by');
+    }
+    
+    function isAllApproved($postId){
+        $reviewers = self::getReviewer($postId, $this->options->approval_role);
+        $reviewers_that_already_approved = array_filter( $reviewers, function($reviewer) { var_dump($reviewer); if ( $reviewer->approval_status ){ return $reviewer; } });
+      
+        return (count($reviewers) == count($reviewers_that_already_approved) ? true : false);
     }
     
     static function getReviewer($postId, $approval_role = 'administrator'){

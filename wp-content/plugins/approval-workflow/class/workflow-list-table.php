@@ -25,6 +25,10 @@ class Workflow_List_Table extends WP_List_Table {
         return $this->options->approval_role;
     }
     
+    function get_mandatory_reviewers(){
+        return $this->options->get_mandatory_reviewers;
+    }
+    
     function _create_columns(){        
         parent::__construct(array(
             'singular' => __('item in workflow', 'approval-workflow'),
@@ -188,7 +192,7 @@ class Workflow_List_Table extends WP_List_Table {
                 
                 $approve_link = admin_url('admin.php?page=approval-workflow&action=approve&postId=' . $post->ID);
                 $reject_link = admin_url('admin.php?page=approval-workflow&action=reject&postId=' . $post->ID);
-                $reviewers = Approval_Workflow::getReviewer( $post->ID, $this->get_approval_role() );
+                $reviewers = Approval_Workflow::getReviewer( $post->ID, $this->get_approval_role(), $this->get_mandatory_reviewers() );
     			$this->items[] = array(
     					'ID' => $post->ID,
     					'title' => $post->post_title,

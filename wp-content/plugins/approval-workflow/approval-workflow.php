@@ -199,6 +199,9 @@ class Approval_Workflow {
                 $this->options->force_workflow = 'off';
             }
 		    
+            if(isset($_POST['mandatory_reviewers'])){
+                $this->options->mandatory_reviewers = $_POST['mandatory_reviewers'];
+            }
             
 		    $this->options->save();
     ?>
@@ -232,6 +235,23 @@ class Approval_Workflow {
                     <td>
                         <input name="force_workflow" id="force_workflow" type="checkbox" <?php echo $this->options->force_workflow =='on' ? 'checked' : '' ; ?> />
                         <strong><?php _e('Force Workflow'); ?></strong><br />
+                    </td>
+                </tr>
+                <tr valign="top">
+                    <th scope="row">
+                        
+                        <em><?php _e('Mandatory Reviewers')?></em>
+                    </th>
+                    <td>
+                        <?php
+                            $approvers = get_users( 'role=' . $this->options->approval_role );
+                            $approversHtml = '<div class="reviewers-list">';
+                            foreach( $approvers as $approver ){
+                                $approversHtml .= '<input name="mandatory_reviewers" id="mandatory_reviewers" type="checkbox" value="'. $approver->ID . '" />'.  $approver->display_name;
+                            }
+                            $approversHtml .= '</div>';
+                            echo $approversHtml;
+                        ?>
                     </td>
                 </tr>
     		</table>
@@ -277,7 +297,7 @@ class Approval_Workflow {
            
 ?>
         <div class="misc-pub-section misc-pub-section-last">
-                <?php echo self::render_reviewer_list(  self::getReviewer( $post->ID, $this->options->approval_role ) ); ?> 
+                <?php echo self::render_reviewer_list(  self::getReviewer( $post->ID, $this->options->approval_role, $this->options->mandatory_reviewers ) ); ?> 
                 </div>
 <?php
         }
@@ -386,15 +406,15 @@ class Approval_Workflow {
     }
     
     function isAllApproved($postId){
-        $reviewers = self::getReviewer($postId, $this->options->approval_role);
+        $reviewers = self::getReviewer($postId, $this->options->approval_role, $this->options->mandatory_reviewers );
         $reviewers_that_already_approved = array_filter( $reviewers, function($reviewer) { var_dump($reviewer); if ( $reviewer->approval_status ){ return $reviewer; } });
       
         return (count($reviewers) == count($reviewers_that_already_approved) ? true : false);
     }
     
-    static function getReviewer($postId, $approval_role = 'administrator'){
+    static function getReviewer($postId, $approval_role = 'administrator', $mandatory_reviewers){
         $output = array();
-        $reviewers = get_users( 'role=' . $approval_role );
+        $reviewers = count($mandatory_reviewers) > 0 ? $mandatory_reviewers : get_users( 'role=' . $approval_role );
         $reviewerIds_that_already_approved = get_post_meta( $postId, '_approved_by' );
         $reviewers_that_already_approved = array();   
         

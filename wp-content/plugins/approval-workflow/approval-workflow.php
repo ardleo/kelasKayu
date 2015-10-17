@@ -256,17 +256,17 @@ class Approval_Workflow {
         
 		// Only show if people don't have publish permissions
 		//if(!current_user_can('publish_' . $post->post_type . 's')){    // WordPress always appends an 's' to the end of the capability  )){
-        
+
         if ($this->options->force_workflow != 'on'){
 ?>
 		<div class="misc-pub-section misc-pub-section-last">
-			<input type="checkbox" name="aw_submit_to_workflow" id="aw_submit_to_workflow" value="1" /><label for="aw_submit_to_workflow"><strong><?php _e('Submit to Workflow'); ?></strong></label> 
+			<input type="checkbox" name="aw_submit_to_workflow" id="aw_submit_to_workflow" /><label for="aw_submit_to_workflow"><strong><?php _e('Submit to Workflow'); ?></strong></label> 
 		</div>
 <?php
 		}else{
            ?>
 		<div class="misc-pub-section misc-pub-section-last" style="display:none">
-			<input type="checkbox" name="aw_submit_to_workflow" id="aw_submit_to_workflow" value="1" checked disabled /><label for="aw_submit_to_workflow" style="color: #999;"><strong><?php _e('Submit to Workflow'); ?></strong></label> 
+			<input type="checkbox" name="aw_submit_to_workflow" id="aw_submit_to_workflow" checked /><label for="aw_submit_to_workflow" style="color: #999;"><strong><?php _e('Submit to Workflow'); ?></strong></label> 
 		</div>
 <?php 
         }
@@ -303,7 +303,7 @@ class Approval_Workflow {
 		
             
 		// if using workflow
-        //if((isset($_POST['aw_submit_to_workflow']) && $_POST['aw_submit_to_workflow'] == 1)){
+        //if((isset($_POST['aw_submit_to_workflow']) && $_POST['aw_submit_to_workflow'] == on)){
 		if(!current_user_can('publish_' . $post->post_type . 's')){    // WordPress always appends an 's' to the end of the capability  
             
             
@@ -335,9 +335,8 @@ class Approval_Workflow {
             
             
     		update_post_meta($post_id, '_in_progress', 1);
-    		
     		// If submitting to workflow
-            if((isset($_POST['aw_submit_to_workflow']) && $_POST['aw_submit_to_workflow'] == 1)){
+            if((isset($_POST['aw_submit_to_workflow']) && $_POST['aw_submit_to_workflow'] == 'on')){
                 update_post_meta($post_id, '_waiting_for_approval', 1);
                 $this->notify_approvers($post);
     		}

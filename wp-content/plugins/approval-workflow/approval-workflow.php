@@ -200,7 +200,13 @@ class Approval_Workflow {
             }
 		    
             if(isset($_POST['mandatory_reviewers'])){
+                /* based on number
                 $this->options->mandatory_reviewers = $_POST['mandatory_reviewers'];
+                */
+                $this->options->mandatory_reviewers = array();
+                foreach( $_POST['mandatory_reviewers'] as $reviewer ){
+                    array_push($this->options->mandatory_reviewers, $reviewer);
+                }
             }
             
 		    $this->options->save();
@@ -245,11 +251,26 @@ class Approval_Workflow {
                     <td>
                         <?php
                             $approvers = get_users( 'role=' . $this->options->approval_role );
-                            $approversHtml = '<div class="reviewers-list">';
+                            /* based on number
+                            $approversHtml = '<select name="mandatory_reviewers" class="reviewers-list">';
+                            $i = 1;
                             foreach( $approvers as $approver ){
-                                $approversHtml .= '<input name="mandatory_reviewers" id="mandatory_reviewers" type="checkbox" value="'. $approver->ID . '" />'.  $approver->display_name;
+                                $approversHtml .= '<option value="'. $i . '"'. ($i == $this->options->mandatory_reviewers ? ' selected' : '') . '>'.  $i . '</option>';
+                                $i++;
+                            }
+                            $approversHtml .= '</select>';
+                            */
+                            
+                            $approversHtml = '<div class="reviewers-list">';
+                            
+                            echo var_dump($this->options->mandatory_reviewers);
+            
+                            foreach( $approvers as $approver ){
+                                $approversHtml .= '<span><input name="mandatory_reviewers" type="checkbox" value="'. $approver->ID . '" '. ( stripos($this->options->mandatory_reviewers,$approver->ID) > -1 ? ' checked' : '') . '/>'.  $approver->display_name . '</span>';
+                                $i++;
                             }
                             $approversHtml .= '</div>';
+            
                             echo $approversHtml;
                         ?>
                     </td>
@@ -427,7 +448,7 @@ class Approval_Workflow {
             if ( in_array( $reviewer->ID, $reviewerIds_that_already_approved ) ){
                 $_reviewer->approval_status = true;
             } else {
-                $_reviewer->approval_status = false;
+                $_reviewer->approval_status = false; 
             }
             
             array_push( $reviewers_that_already_approved, $_reviewer );

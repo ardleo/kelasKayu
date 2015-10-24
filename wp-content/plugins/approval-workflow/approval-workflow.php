@@ -51,6 +51,11 @@ class Approval_Workflow {
             $this->options->save();
         }
         
+		 if(!isset($this->options->mandatory_reviewers)){
+            $this->options->mandatory_reviewers = array();
+            $this->options->save();
+        }
+		
         //register stylesheet
         wp_register_style('approval-workflow-style', AW_PLUGIN_URL . '/css/style.css' );
         wp_enqueue_style( 'approval-workflow-style' );
@@ -200,16 +205,11 @@ class Approval_Workflow {
             }
 		    
             if(isset($_POST['mandatory_reviewers'])){
-                /* based on number
-                $this->options->mandatory_reviewers = $_POST['mandatory_reviewers'];
-                */
-                $this->options->mandatory_reviewers = array();
-                foreach( $_POST['mandatory_reviewers'] as $reviewer ){
-                    array_push($this->options->mandatory_reviewers, $reviewer);
-                }
+				$this->options->mandatory_reviewers = $_POST['mandatory_reviewers'];
             }
             
 		    $this->options->save();
+			
     ?>
     		<script>
 				window.location="<?php echo $current_page ?>?page=approval-workflow-options&updated=true&updatedmsg=<?php echo urlencode(__('Settings Saved')); ?>";
@@ -262,11 +262,9 @@ class Approval_Workflow {
                             */
                             
                             $approversHtml = '<div class="reviewers-list">';
-                            
-                            echo var_dump($this->options->mandatory_reviewers);
-            
+                           
                             foreach( $approvers as $approver ){
-                                $approversHtml .= '<span><input name="mandatory_reviewers" type="checkbox" value="'. $approver->ID . '" '. ( stripos($this->options->mandatory_reviewers,$approver->ID) > -1 ? ' checked' : '') . '/>'.  $approver->display_name . '</span>';
+                                $approversHtml .= '<span><input name="mandatory_reviewers[]" type="checkbox" value="'. $approver->ID . '" '. ( array_search($approver->ID, $this->options->mandatory_reviewers) > -1 ? ' checked' : '') . '/>'.  $approver->display_name . '</span>';
                                 $i++;
                             }
                             $approversHtml .= '</div>';
@@ -318,7 +316,7 @@ class Approval_Workflow {
            
 ?>
         <div class="misc-pub-section misc-pub-section-last">
-                <?php echo self::render_reviewer_list(  self::getReviewer( $post->ID, $this->options->approval_role, $this->options->mandatory_reviewers ) ); ?> 
+                <?php echo self::render_reviewer_list(  self::getReviewer( $post->ID, $this->options->approval_role ) ); ?> 
                 </div>
 <?php
         }
@@ -427,15 +425,23 @@ class Approval_Workflow {
     }
     
     function isAllApproved($postId){
-        $reviewers = self::getReviewer($postId, $this->options->approval_role, $this->options->mandatory_reviewers );
-        $reviewers_that_already_approved = array_filter( $reviewers, function($reviewer) { var_dump($reviewer); if ( $reviewer->approval_status ){ return $reviewer; } });
-      
-        return (count($reviewers) == count($reviewers_that_already_approved) ? true : false);
+		$result = true;
+        $reviewers = self::getReviewer($postId, $this->options->approval_role );
+		$reviewerIds_that_already_approved = get_post_meta( $postId, '_approved_by' );
+		
+		foreach( $this->options->mandatory_reviewers as $reviewerId ){ 
+			if ( !in_array( $reviewerId, $reviewerIds_that_already_approved ) ){
+				$result = false;			
+				break;
+			}
+		}
+		
+		return $result;
     }
-    
-    static function getReviewer($postId, $approval_role = 'administrator', $mandatory_reviewers){
+	
+    static function getReviewer($postId, $approval_role = 'administrator'){
         $output = array();
-        $reviewers = count($mandatory_reviewers) > 0 ? $mandatory_reviewers : get_users( 'role=' . $approval_role );
+        $reviewers = get_users( 'role=' . $approval_role );
         $reviewerIds_that_already_approved = get_post_meta( $postId, '_approved_by' );
         $reviewers_that_already_approved = array();   
         

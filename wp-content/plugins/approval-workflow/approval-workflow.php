@@ -15,7 +15,7 @@ define('AW_PLUGIN_URL', plugins_url($path = '/approval-workflow'));
 
 require_once(ABSPATH . 'wp-admin/includes/plugin.php');    // Needed for is_plugin_active_for_network()
 require_once('options.class.php');
-require_once('/class/workflow-reviewer.php');
+require_once('class/workflow-reviewer.php');
 
 class Approval_Workflow {
     var $is_network;

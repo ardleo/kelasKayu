@@ -35,7 +35,7 @@ class Approval_Workflow {
         add_action('admin_menu', array(&$this, 'admin_menu'));
         add_action('admin_notices', array(&$this, 'admin_notices'));
         add_action('post_submitbox_misc_actions', array(&$this, 'post_submitbox_misc_actions'));
-        add_action('save_post', array(&$this, 'save_post_with_workflow'), 1, 2);
+        add_action('save_post', array(&$this, 'save_post'), 1, 2);
         add_action('wp_restore_post_revision', array(&$this, 'restore_post_revision'), 1, 2);        
     }
     
@@ -322,7 +322,7 @@ class Approval_Workflow {
         }
     }
     
-    function save_post_with_workflow($post_id, $post){
+    function save_post($post_id, $post){
         global $wpdb;
         $is_new = false; 
         

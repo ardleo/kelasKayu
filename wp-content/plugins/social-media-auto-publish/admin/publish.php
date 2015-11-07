@@ -1,6 +1,6 @@
 <?php 
 
-if (method_exists($approval_workflow, 'save_post_with_workflow')){
+if (method_exists($approval_workflow, 'save_post')){
 	add_action('save_post', 'xyz_link_publish', 5, 2);
 }else{
 	add_action('publish_post', 'xyz_link_publish');
